@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Flame, ShieldCheck, AlertTriangle, Plus, Search, Edit2, Trash2, MapPin, X, Activity, Navigation, FileSpreadsheet, FileText, Download } from 'lucide-react';
+import { Flame, ShieldCheck, AlertTriangle, Plus, Search, Edit2, Trash2, MapPin, X, Activity, Navigation, FileSpreadsheet, FileText, Download, RotateCcw } from 'lucide-react';
 import { addMonths, isBefore, format, parseISO, differenceInDays } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -16,10 +16,10 @@ function App() {
       return JSON.parse(saved);
     }
     return [
-      { id: '1', name: 'FE-KU-01', location: 'อาคารสารนิเทศ 50 ปี - ชั้น 1 หน้าลิฟต์', coordinates: null, lastMaintenance: '2025-06-15' },
-      { id: '2', name: 'FE-KU-02', location: 'อาคารจักรพันธ์เพ็ญศิริ - โถงทางเข้าหลัก', coordinates: null, lastMaintenance: '2025-01-10' },
-      { id: '3', name: 'FE-KU-03', location: 'สำนักหอสมุด - ชั้น 2 โซนหนังสืออ้างอิง', coordinates: null, lastMaintenance: '2024-05-20' },
-      { id: '4', name: 'FE-KU-04', location: 'ตึกชูชาติ กำภู (คณะวิศวะ) - ทางเดินหน้าห้องพักอาจารย์', coordinates: null, lastMaintenance: '2025-05-30' },
+      { id: '1', name: 'FE-KU-01', location: 'อาคารสารนิเทศ 50 ปี - ชั้น 1 หน้าลิฟต์', type: 'เคมีแห้ง (Dry Chemical)', size: '15 lbs', coordinates: null, lastMaintenance: '2025-06-15' },
+      { id: '2', name: 'FE-KU-02', location: 'อาคารจักรพันธ์เพ็ญศิริ - โถงทางเข้าหลัก', type: 'ก๊าซคาร์บอนไดออกไซด์ (CO2)', size: '10 lbs', coordinates: null, lastMaintenance: '2025-01-10' },
+      { id: '3', name: 'FE-KU-03', location: 'สำนักหอสมุด - ชั้น 2 โซนหนังสืออ้างอิง', type: 'เคมีแห้ง (Dry Chemical)', size: '15 lbs', coordinates: null, lastMaintenance: '2024-05-20' },
+      { id: '4', name: 'FE-KU-04', location: 'ตึกชูชาติ กำภู (คณะวิศวะ) - ทางเดินหน้าห้องพักอาจารย์', type: 'เคมีแห้ง (Dry Chemical)', size: '10 lbs', coordinates: null, lastMaintenance: '2025-05-30' },
     ];
   });
 
@@ -31,9 +31,13 @@ function App() {
   const [formData, setFormData] = useState({
     name: '',
     location: '',
+    type: 'เคมีแห้ง (Dry Chemical)',
+    size: '15 lbs',
     coordinates: null,
     lastMaintenance: format(new Date(), 'yyyy-MM-dd')
   });
+
+  const [undoAction, setUndoAction] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('fireExtinguishers', JSON.stringify(items));
@@ -83,6 +87,8 @@ function App() {
       setFormData({
         name: item.name,
         location: item.location,
+        type: item.type || 'เคมีแห้ง (Dry Chemical)',
+        size: item.size || '15 lbs',
         coordinates: item.coordinates || null,
         lastMaintenance: item.lastMaintenance
       });
@@ -91,6 +97,8 @@ function App() {
       setFormData({
         name: '',
         location: '',
+        type: 'เคมีแห้ง (Dry Chemical)',
+        size: '15 lbs',
         coordinates: null,
         lastMaintenance: format(new Date(), 'yyyy-MM-dd')
       });
@@ -120,9 +128,25 @@ function App() {
   };
 
   const performMaintenance = (id) => {
-    if (confirm('Record maintenance for today?')) {
+    if (confirm('ยืนยันบันทึกการบำรุงรักษาถังนี้เป็นวันนี้?')) {
       const today = format(new Date(), 'yyyy-MM-dd');
+      const itemToUpdate = items.find(i => i.id === id);
+      const previousDate = itemToUpdate.lastMaintenance;
+      
       setItems(items.map(item => item.id === id ? { ...item, lastMaintenance: today } : item));
+      
+      setUndoAction({ id, name: itemToUpdate.name, previousDate });
+      
+      setTimeout(() => {
+        setUndoAction(prev => prev && prev.id === id ? null : prev);
+      }, 10000);
+    }
+  };
+
+  const handleUndo = () => {
+    if (undoAction) {
+      setItems(items.map(item => item.id === undoAction.id ? { ...item, lastMaintenance: undoAction.previousDate } : item));
+      setUndoAction(null);
     }
   };
 
@@ -223,6 +247,23 @@ function App() {
 
   return (
     <div className="app-container">
+      {undoAction && (
+        <div className="undo-toast">
+          <div className="undo-toast-content">
+            <ShieldCheck size={18} color="var(--status-ok)" />
+            <span>อัปเดตการบำรุงรักษา {undoAction.name} แล้ว</span>
+          </div>
+          <div className="undo-toast-actions">
+            <button className="btn-undo" onClick={handleUndo}>
+              <RotateCcw size={14} /> เลิกทำ
+            </button>
+            <button className="btn-close-toast" onClick={() => setUndoAction(null)}>
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <header>
         <div className="logo-section">
           <div className="stat-icon red">
@@ -303,7 +344,7 @@ function App() {
                     </div>
                     <div>
                       <div className="location-text">{item.name}</div>
-                      <div className="location-subtext">{item.location}</div>
+                      <div className="location-subtext">{item.location} • {item.type} ({item.size})</div>
                       {item.coordinates && (
                         <a 
                           href={`https://www.google.com/maps/search/?api=1&query=${item.coordinates.lat},${item.coordinates.lng}`} 
@@ -381,7 +422,7 @@ function App() {
                       </div>
                       <div>
                         <div className="location-text">{item.name}</div>
-                        <div className="location-subtext">{item.location}</div>
+                        <div className="location-subtext">{item.location} • {item.type} ({item.size})</div>
                         {item.coordinates && (
                           <a 
                             href={`https://www.google.com/maps/search/?api=1&query=${item.coordinates.lat},${item.coordinates.lng}`} 
@@ -476,6 +517,30 @@ function App() {
                   value={formData.location}
                   onChange={(e) => setFormData({...formData, location: e.target.value})}
                 />
+              </div>
+              <div className="form-group-row" style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>ชนิด/ประเภท (Type)</label>
+                  <select 
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  >
+                    <option value="เคมีแห้ง (Dry Chemical)">เคมีแห้ง (Dry Chemical)</option>
+                    <option value="ก๊าซคาร์บอนไดออกไซด์ (CO2)">ก๊าซคาร์บอนไดออกไซด์ (CO2)</option>
+                    <option value="โฟม (Foam)">โฟม (Foam)</option>
+                    <option value="น้ำยาเหลวระเหย (Clean Agent)">น้ำยาเหลวระเหย (Clean Agent)</option>
+                    <option value="น้ำ (Water)">น้ำ (Water)</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>ขนาด (Size)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 10 lbs, 15 lbs"
+                    value={formData.size}
+                    onChange={(e) => setFormData({...formData, size: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label>GPS Coordinates (Optional)</label>

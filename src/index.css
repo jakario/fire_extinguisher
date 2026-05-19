@@ -539,6 +539,73 @@ tbody tr:hover td {
   box-shadow: 0 0 15px var(--primary-red-glow);
 }
 
+/* Undo Toast */
+.undo-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  z-index: 2000;
+  animation: slideUp 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideUp {
+  from { bottom: -50px; opacity: 0; }
+  to { bottom: 24px; opacity: 1; }
+}
+
+.undo-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.undo-toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid var(--border);
+  padding-left: 16px;
+}
+
+.btn-undo {
+  background: transparent;
+  color: var(--status-warning);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.btn-undo:hover {
+  text-decoration: underline;
+}
+
+.btn-close-toast {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  display: flex;
+}
+
+.btn-close-toast:hover {
+  color: white;
+}
+
 /* Mobile Responsive Adjustments */
 @media (max-width: 768px) {
   .app-container {
