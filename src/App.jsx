@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Flame, ShieldCheck, AlertTriangle, Plus, Search, Edit2, Trash2, MapPin, X, Activity, Navigation, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { addMonths, isBefore, format, parseISO, differenceInDays } from 'date-fns';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 const MAINTENANCE_INTERVAL_MONTHS = 12;
@@ -176,7 +176,7 @@ function App() {
       tableRows.push(rowData);
     });
     
-    doc.autoTable({
+    autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 20,
