@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Flame, ShieldCheck, AlertTriangle, Plus, Search, Edit2, Trash2, MapPin, X, Activity, Navigation } from 'lucide-react';
+import { Flame, ShieldCheck, AlertTriangle, Plus, Search, Edit2, Trash2, MapPin, X, Activity, Navigation, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { addMonths, isBefore, format, parseISO, differenceInDays } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const MAINTENANCE_INTERVAL_MONTHS = 12;
 
@@ -15,8 +18,8 @@ function App() {
     return [
       { id: '1', name: 'FE-KU-01', location: 'อาคารสารนิเทศ 50 ปี - ชั้น 1 หน้าลิฟต์', coordinates: null, lastMaintenance: '2025-06-15' },
       { id: '2', name: 'FE-KU-02', location: 'อาคารจักรพันธ์เพ็ญศิริ - โถงทางเข้าหลัก', coordinates: null, lastMaintenance: '2025-01-10' },
-      { id: '3', name: 'FE-KU-03', location: 'สำนักหอสมุด - ชั้น 2 โซนหนังสืออ้างอิง', coordinates: null, lastMaintenance: '2024-05-20' }, // Expired
-      { id: '4', name: 'FE-KU-04', location: 'ตึกชูชาติ กำภู (คณะวิศวะ) - ทางเดินหน้าห้องพักอาจารย์', coordinates: null, lastMaintenance: '2025-05-30' }, // Expiring soon
+      { id: '3', name: 'FE-KU-03', location: 'สำนักหอสมุด - ชั้น 2 โซนหนังสืออ้างอิง', coordinates: null, lastMaintenance: '2024-05-20' },
+      { id: '4', name: 'FE-KU-04', location: 'ตึกชูชาติ กำภู (คณะวิศวะ) - ทางเดินหน้าห้องพักอาจารย์', coordinates: null, lastMaintenance: '2025-05-30' },
     ];
   });
 
@@ -148,6 +151,60 @@ function App() {
     );
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Use standard font for PDF, jsPDF standard doesn't support Thai natively well without custom fonts, 
+    // but for ID, Date, it will work. For Thai we might just try standard or warn.
+    // If we really want full Thai support, we'd need to load a TTF font. 
+    // We will stick to basic for now as it will render as much as it can.
+    doc.text("FireGuard - Maintenance Report", 14, 15);
+    
+    const tableColumn = ["ID", "Location", "Status", "Last Maint.", "Next Maint.", "Coords"];
+    const tableRows = [];
+    
+    filteredItems.forEach(item => {
+      const coordsData = item.coordinates ? `${item.coordinates.lat.toFixed(4)}, ${item.coordinates.lng.toFixed(4)}` : 'N/A';
+      const rowData = [
+        item.name,
+        item.location,
+        item.status.toUpperCase(),
+        item.lastMaintenanceFormatted,
+        item.nextMaintenanceFormatted,
+        coordsData
+      ];
+      tableRows.push(rowData);
+    });
+    
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { font: "helvetica", fontSize: 9 }, // use standard font
+      headStyles: { fillColor: [255, 51, 51] }
+    });
+    
+    doc.save(`FireGuard_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
+  const exportExcel = () => {
+    const exportData = filteredItems.map(item => ({
+      "Unit ID": item.name,
+      "Location": item.location,
+      "Status": item.status.toUpperCase(),
+      "Days Until Maint.": item.daysUntilMaintenance,
+      "Last Maintenance": item.lastMaintenanceFormatted,
+      "Next Maintenance": item.nextMaintenanceFormatted,
+      "Coordinates (Lat, Lng)": item.coordinates ? `${item.coordinates.lat}, ${item.coordinates.lng}` : 'N/A'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+    
+    XLSX.writeFile(workbook, `FireGuard_Report_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+  };
+
   return (
     <div className="app-container">
       <header>
@@ -159,6 +216,16 @@ function App() {
             <h1>FireGuard System</h1>
             <p>Fire Extinguisher Tracking</p>
           </div>
+        </div>
+        <div className="header-actions">
+          <button className="btn-export pdf" onClick={exportPDF} title="Download PDF Report">
+            <FileText size={18} />
+            <span>PDF</span>
+          </button>
+          <button className="btn-export excel" onClick={exportExcel} title="Download Excel Report">
+            <FileSpreadsheet size={18} />
+            <span>Excel</span>
+          </button>
         </div>
       </header>
 
