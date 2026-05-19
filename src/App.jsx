@@ -4,6 +4,7 @@ import { addMonths, isBefore, format, parseISO, differenceInDays } from 'date-fn
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { Analytics } from '@vercel/analytics/react';
 
 const MAINTENANCE_INTERVAL_MONTHS = 12;
 
@@ -578,6 +579,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
