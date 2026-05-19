@@ -151,40 +151,56 @@ function App() {
     );
   };
 
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    
-    // Use standard font for PDF, jsPDF standard doesn't support Thai natively well without custom fonts, 
-    // but for ID, Date, it will work. For Thai we might just try standard or warn.
-    // If we really want full Thai support, we'd need to load a TTF font. 
-    // We will stick to basic for now as it will render as much as it can.
-    doc.text("FireGuard - Maintenance Report", 14, 15);
-    
-    const tableColumn = ["ID", "Location", "Status", "Last Maint.", "Next Maint.", "Coords"];
-    const tableRows = [];
-    
-    filteredItems.forEach(item => {
-      const coordsData = item.coordinates ? `${item.coordinates.lat.toFixed(4)}, ${item.coordinates.lng.toFixed(4)}` : 'N/A';
-      const rowData = [
-        item.name,
-        item.location,
-        item.status.toUpperCase(),
-        item.lastMaintenanceFormatted,
-        item.nextMaintenanceFormatted,
-        coordsData
-      ];
-      tableRows.push(rowData);
-    });
-    
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-      styles: { font: "helvetica", fontSize: 9 }, // use standard font
-      headStyles: { fillColor: [255, 51, 51] }
-    });
-    
-    doc.save(`FireGuard_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  const exportPDF = async () => {
+    try {
+      const response = await fetch('/THSarabunNew.ttf');
+      const buffer = await response.arrayBuffer();
+      const base64Font = btoa(
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const doc = new jsPDF();
+      doc.addFileToVFS('THSarabunNew.ttf', base64Font);
+      doc.addFont('THSarabunNew.ttf', 'THSarabun', 'normal');
+      doc.setFont('THSarabun');
+
+      doc.setFontSize(16);
+      doc.text("FireGuard - รายงานการบำรุงรักษาถังดับเพลิง", 14, 15);
+      
+      const tableColumn = ["รหัส / ชื่อ", "ตำแหน่งที่ตั้ง", "สถานะ", "บำรุงรักษาล่าสุด", "รอบถัดไป", "พิกัด GPS"];
+      const tableRows = [];
+      
+      filteredItems.forEach(item => {
+        const coordsData = item.coordinates ? `${item.coordinates.lat.toFixed(4)}, ${item.coordinates.lng.toFixed(4)}` : '-';
+        const statusMap = {
+          'good': 'ปกติ',
+          'warning': `ใกล้ถึง (${item.daysUntilMaintenance} วัน)`,
+          'danger': 'เลยกำหนด'
+        };
+        const rowData = [
+          item.name,
+          item.location,
+          statusMap[item.status] || item.status,
+          item.lastMaintenanceFormatted,
+          item.nextMaintenanceFormatted,
+          coordsData
+        ];
+        tableRows.push(rowData);
+      });
+      
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+        styles: { font: "THSarabun", fontSize: 12 },
+        headStyles: { fillColor: [255, 51, 51], font: "THSarabun" }
+      });
+      
+      doc.save(`FireGuard_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Make sure the font file is loaded correctly.");
+    }
   };
 
   const exportExcel = () => {
